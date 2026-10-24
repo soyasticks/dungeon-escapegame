@@ -10,17 +10,6 @@ Plain HTML, CSS, vanilla JavaScript and Canvas. No frameworks, no backend, no ex
 no paid dependencies. The two pixel fonts are bundled locally (SIL Open Font License), so it
 works fully offline.
 
-**▶ Play it online:** https://YOUR-SITE-NAME.netlify.app  <!-- replace with your Netlify link -->
-
-**Made by:** Name (Roll No) · Name (Roll No)  <!-- fill in -->
-Course: Artificial Intelligence, SVKM's NMIMS MPSTME, AY 2026-27
-
-### Key finding
-Across about 1,300 generated mazes, **A\* always found the same optimal cost as UCS**, but how much
-work it saved depended heavily on the maze layout: only **8% fewer nodes** in a maze with no loops
-(long corridors fool the Manhattan heuristic), versus **82% fewer** in a very open maze. See
-[section 8](#8-experiment-results).
-
 ---
 
 ## 1. How to run
@@ -37,20 +26,10 @@ work it saved depended heavily on the maze layout: only **8% fewer nodes** in a 
 - Or run any static server in the folder, e.g. `python -m http.server 8000`, then visit
   `http://localhost:8000`.
 
-### Hosting it online (GitHub + Netlify)
-The project is a static site, so there is nothing to build.
-1. Push this folder to a GitHub repository, with `index.html` at the top level of the repo.
-2. On [Netlify](https://www.netlify.com/), choose **Add new site → Import an existing project → GitHub** and pick the repo.
-3. Leave **Build command** and **Publish directory** empty, then click **Deploy**.
-4. Every later `git push` redeploys the site automatically.
-
-Without Git, you can also drag the folder onto [app.netlify.com/drop](https://app.netlify.com/drop).
-
 ### Running the automated tests (optional, needs Node.js)
 ```bash
 node tests/algorithms.test.js   # algorithm correctness vs reference implementations
 node tests/game.test.js         # headless game simulation and Lab metrics
-node tests/experiment.js        # batch experiment over ~1,300 mazes (used in the report)
 ```
 
 ---
@@ -132,9 +111,8 @@ ai-dungeon-escape/
 │   │   └── labScreen.js       Algorithm Lab controls, table, insights, CSV
 │   └── main.js                Wiring, buttons, shortcuts, frame loop
 └── tests/
-    ├── algorithms.test.js     Algorithm correctness vs reference implementations
-    ├── game.test.js           Headless game simulation
-    └── experiment.js          Batch experiment used in the report
+    ├── algorithms.test.js
+    └── game.test.js
 ```
 
 Game logic (`game/`), algorithms (`algorithms/`), rendering (`render/`) and UI (`ui/`) are
@@ -260,7 +238,7 @@ Open it from the main menu (or from the victory screen).
 - **Run All** animates the cells each algorithm expanded, *in the order it expanded them*, then draws the final path. Every panel animates at the same rate, so algorithms that expand fewer nodes finish first. **Skip Animation** shows the results immediately.
 - The **comparison table** lists: path found, time per run, number of timed runs, nodes expanded, path length, total cost, peak frontier size, and whether the cost is optimal. The best value in each column is highlighted.
 - The **observations** under the table are generated from the measured numbers.
-- **Export CSV** downloads the table for your report. If the page is embedded in another site (where downloads are blocked), the button becomes **Copy CSV** and copies the table to the clipboard instead.
+- **Export CSV** downloads the table for your report.
 
 ### How the metrics are measured (nothing is faked)
 - **Nodes expanded, path length, total cost, peak frontier** come straight from the algorithm's run. The browser test checks the table against fresh independent runs.
@@ -270,40 +248,7 @@ Open it from the main menu (or from the victory screen).
 
 ---
 
-## 8. Experiment results
-
-`node tests/experiment.js` runs all five algorithms on 100 seeded mazes per setting (start top-left,
-goal bottom-right, weighted terrain on). Node counts, path lengths and costs are exactly
-reproducible; times depend on the machine.
-
-**Average over 100 mazes of 29×41 (15% extra loops):**
-
-| Algorithm | Nodes expanded | Steps | Cost | Cost-optimal | Extra cost |
-|---|---|---|---|---|---|
-| BFS | 590.1 | 74.6 | 109.4 | 13% | 14.9% |
-| DFS | 184.6 | 142.4 | 210.1 | 0% | 124.6% |
-| UCS | 573.2 | 78.4 | 95.4 | 100% | 0.0% |
-| Greedy | 110.6 | 89.2 | 129.9 | 5% | 38.0% |
-| A\* | 359.1 | 78.8 | 95.4 | 100% | 0.0% |
-
-**Effect of maze openness (29×41, 100 mazes per row):**
-
-| Extra loops | UCS nodes | A\* nodes | A\* saving | Greedy extra cost |
-|---|---|---|---|---|
-| 0% (perfect maze) | 352.7 | 323.9 | 8.2% | 0.0% |
-| 20% | 604.9 | 368.4 | 39.1% | 37.0% |
-| 40% | 699.9 | 262.5 | 62.5% | 41.8% |
-| 100% (almost open) | 934.3 | 170.6 | 81.7% | 40.5% |
-
-In a perfect maze there is only one route between two cells, so every algorithm finds the same
-path, and the wall-blind Manhattan heuristic barely helps A\*. As walls are removed, the real
-distance gets closer to the Manhattan distance, so A\* heads almost straight for the goal, while
-Greedy starts picking routes that only *look* short. With terrain switched off, BFS is cost-optimal
-in 100% of mazes; with mud and water switched on, in only 13%.
-
----
-
-## 9. Testing
+## 8. Testing
 
 These tests were run during development and all pass:
 
@@ -320,19 +265,19 @@ These tests were run during development and all pass:
 
 ---
 
-## 10. Possible viva questions
+## 9. Possible viva questions
 
 - **Why is A\* optimal with Manhattan distance here?** Because it is admissible and consistent on a 4-directional grid where every step costs ≥ 1 (see section 5).
 - **Why does BFS give a cheaper-looking but more expensive path?** BFS minimises the *number of steps*; it ignores cell costs. UCS and A\* minimise the *sum of costs*.
 - **Why does Greedy expand so few nodes yet return worse paths?** It only uses h(n), never g(n), so it rushes toward the goal and can't tell an expensive route from a cheap one.
-- **Why might A\* only slightly beat UCS in a maze?** The heuristic ignores walls; in a maze the real path often has to move *away* from the goal, so many nodes still look promising to A\*. The experiment in section 8 measures this: 8% saving with no loops, 82% in an open maze.
+- **Why might A\* only slightly beat UCS in a maze?** The heuristic ignores walls; in a maze the real path often has to move *away* from the goal, so many nodes still look promising to A\*.
 - **What happens with an inadmissible heuristic?** A\* could return a suboptimal path. Manhattan distance is never larger than the true remaining cost here, so that can't happen.
 - **How do you guarantee the maze is solvable?** The perfect-maze generator connects every cell; braiding and terrain never disconnect anything; a flood fill verifies it anyway.
 - **Why goal-test on expansion instead of generation?** For UCS and A\* it is required for optimality, and applying the same rule to all five makes "nodes expanded" a fair comparison.
 
 ---
 
-## 11. Credits
+## 10. Credits
 
 - Fonts: *Press Start 2P* (CodeMan38) and *VT323* (Peter Hull), SIL Open Font License 1.1. Licences are in `assets/fonts/`.
 - All code, algorithms, sprites and tile art were written from scratch for this project.
