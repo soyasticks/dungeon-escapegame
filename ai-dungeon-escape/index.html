@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Dungeon Escape</title>
+  <meta name="description" content="A dungeon-escape game whose enemies are driven by BFS, DFS, UCS, Greedy Best-First and A* search, with an Algorithm Lab for side-by-side comparison." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===================== MAIN MENU ===================== -->
+    <section id="screen-menu" class="screen active" aria-label="Main menu">
+      <div class="menu-card panel">
+        <p class="eyebrow">An Artificial Intelligence Project</p>
+        <h1 class="title">AI&nbsp;Dungeon<br /><span>Escape</span></h1>
+        <p class="tagline">Collect the keys. Grab the treasure. Outrun monsters that hunt you with real search algorithms.</p>
+        <div class="menu-buttons">
+          <button class="btn btn-primary" data-action="play">▶ Play</button>
+          <button class="btn" data-action="lab">⚗ Algorithm Lab</button>
+          <button class="btn" data-action="howto">? How to Play</button>
+        </div>
+        <p class="highscore">Best score: <span id="menu-highscore">0</span></p>
+        <button class="btn btn-small sound-toggle menu-sound" data-action="toggle-sound">♪ Sound: On</button>
+        <ul class="algo-chips" id="menu-chips"></ul>
+      </div>
+    </section>
+
+    <!-- ===================== HOW TO PLAY ===================== -->
+    <section id="screen-howto" class="screen" aria-label="How to play">
+      <div class="howto panel">
+        <h2>How to Play</h2>
+        <div class="howto-grid">
+          <div>
+            <h3>Goal</h3>
+            <p>Collect every <b class="gold">key</b> on the level to unlock the <b class="violet">gate</b>, then step onto it to escape. Three levels, each larger with more enemies and traps.</p>
+            <h3>Controls</h3>
+            <table class="keys">
+              <tr><td><kbd>W A S D</kbd> / <kbd>Arrows</kbd></td><td>Move</td></tr>
+              <tr><td><kbd>P</kbd> / <kbd>Esc</kbd></td><td>Pause / resume</td></tr>
+              <tr><td><kbd>R</kbd></td><td>Restart level</td></tr>
+              <tr><td><kbd>V</kbd></td><td>Show / hide enemy AI paths</td></tr>
+              <tr><td><kbd>M</kbd></td><td>Sound on / off</td></tr>
+              <tr><td><kbd>Enter</kbd></td><td>Continue on level screens</td></tr>
+            </table>
+          </div>
+          <div>
+            <h3>The dungeon</h3>
+            <ul class="legend">
+              <li><span class="sw sw-floor"></span>Stone floor — cost 1</li>
+              <li><span class="sw sw-mud"></span>Mud — cost 3, slows you</li>
+              <li><span class="sw sw-water"></span>Deep water — cost 5, slows you more</li>
+              <li><span class="sw sw-trap"></span>Spike trap — hurts when spikes are up</li>
+              <li><span class="sw sw-gem"></span>Gems +50, chest +150, key +100</li>
+              <li><span class="sw sw-potion"></span>Potion — restores one heart</li>
+            </ul>
+            <h3>The enemies</h3>
+            <p>Each monster plans its route with one search algorithm (its label shows which). They patrol until you come close, then hunt you. Contact costs a heart. Press <kbd>V</kbd> to watch their planned paths.</p>
+          </div>
+        </div>
+        <button class="btn" data-action="menu">← Back</button>
+      </div>
+    </section>
+
+    <!-- ===================== GAME ===================== -->
+    <section id="screen-game" class="screen" aria-label="Game">
+      <header class="hud panel">
+        <div class="hud-item"><span class="hud-label">Level</span><span id="hud-level">1</span></div>
+        <div class="hud-item hud-name" id="hud-level-name">—</div>
+        <div class="hud-item"><span class="hud-label">Health</span><span id="hud-hearts" class="hearts"></span></div>
+        <div class="hud-item"><span class="hud-label">Keys</span><span id="hud-keys">0/0</span></div>
+        <div class="hud-item"><span class="hud-label">Score</span><span id="hud-score">0</span></div>
+        <div class="hud-item"><span class="hud-label">Time</span><span id="hud-time">0:00</span></div>
+      </header>
+
+      <div class="game-layout">
+        <div class="canvas-wrap panel" id="canvas-wrap">
+          <canvas id="game-canvas" width="960" height="660"></canvas>
+          <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+          <div class="overlay" id="overlay-pause">
+            <div class="overlay-card">
+              <h2>Paused</h2>
+              <button class="btn btn-primary" data-action="resume">▶ Resume</button>
+              <button class="btn" data-action="restart-level">↻ Restart Level</button>
+              <button class="btn" data-action="new-game">✦ New Game</button>
+              <button class="btn sound-toggle" data-action="toggle-sound">♪ Sound: On</button>
+              <button class="btn" data-action="howto-from-game">? How to Play</button>
+              <button class="btn" data-action="menu">⌂ Main Menu</button>
+            </div>
+          </div>
+
+          <div class="overlay" id="overlay-level">
+            <div class="overlay-card">
+              <h2 class="gold">Level Cleared!</h2>
+              <table class="bonus" id="level-bonus"></table>
+              <button class="btn btn-primary" data-action="next-level">Next Level ▶</button>
+            </div>
+          </div>
+
+          <div class="overlay" id="overlay-gameover">
+            <div class="overlay-card">
+              <h2 class="red">You Have Fallen</h2>
+              <p id="gameover-text"></p>
+              <button class="btn btn-primary" data-action="restart-level">↻ Retry Level</button>
+              <button class="btn" data-action="new-game">✦ New Game</button>
+              <button class="btn" data-action="menu">⌂ Main Menu</button>
+            </div>
+          </div>
+
+          <div class="overlay" id="overlay-victory">
+            <div class="overlay-card">
+              <h2 class="gold">You Escaped!</h2>
+              <p id="victory-text"></p>
+              <table class="bonus" id="victory-bonus"></table>
+              <button class="btn btn-primary" data-action="new-game">✦ Play Again</button>
+              <button class="btn" data-action="lab">⚗ Algorithm Lab</button>
+              <button class="btn" data-action="menu">⌂ Main Menu</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="dpad" aria-label="Touch controls">
+          <button data-dir="up" aria-label="Up">▲</button>
+          <button data-dir="left" aria-label="Left">◀</button>
+          <button data-dir="down" aria-label="Down">▼</button>
+          <button data-dir="right" aria-label="Right">▶</button>
+        </div>
+        <aside class="side panel">
+          <h3>Enemy AI</h3>
+          <ul class="enemy-list" id="enemy-list"></ul>
+          <p class="hint">“Last plan” = the enemy's most recent real search: nodes expanded, path length and cost.</p>
+          <div class="side-buttons">
+            <button class="btn btn-small" data-action="pause" id="btn-pause">❚❚ Pause</button>
+            <button class="btn btn-small" data-action="restart-level">↻ Restart</button>
+            <button class="btn btn-small" data-action="toggle-paths" id="btn-paths">◎ Paths: On</button>
+            <button class="btn btn-small" data-action="menu">⌂ Menu</button>
+            <button class="btn btn-small sound-toggle btn-wide" data-action="toggle-sound">♪ Sound: On</button>
+          </div>
+          <p class="seed">Maze seed: <span id="hud-seed">—</span></p>
+        </aside>
+      </div>
+
+    </section>
+
+    <!-- ===================== ALGORITHM LAB ===================== -->
+    <section id="screen-lab" class="screen" aria-label="Algorithm Lab">
+      <header class="lab-header">
+        <h2>⚗ Algorithm Lab</h2>
+        <p>All five algorithms run on the <b>same maze</b> with the same start and goal. Metrics come from the actual runs.</p>
+        <button class="btn btn-small" data-action="menu">← Menu</button>
+      </header>
+
+      <div class="lab-controls panel">
+        <label>Maze size
+          <select id="lab-size">
+            <option value="15x21">Small 15×21</option>
+            <option value="21x31" selected>Medium 21×31</option>
+            <option value="29x41">Large 29×41</option>
+            <option value="41x61">Huge 41×61</option>
+          </select>
+        </label>
+        <label>Extra loops <span id="lab-loops-val">15%</span>
+          <input type="range" id="lab-loops" min="0" max="40" value="15" />
+        </label>
+        <label class="check"><input type="checkbox" id="lab-terrain" checked /> Weighted terrain</label>
+        <label>Seed
+          <input type="number" id="lab-seed" min="0" step="1" />
+        </label>
+        <button class="btn btn-small" id="lab-new">⟳ New Maze</button>
+        <button class="btn btn-small" id="lab-load">Load Seed</button>
+        <label>Click tool
+          <select id="lab-tool">
+            <option value="start">Set start (S)</option>
+            <option value="goal">Set goal (G)</option>
+            <option value="wall">Toggle wall</option>
+            <option value="mud">Paint mud (3)</option>
+            <option value="water">Paint water (5)</option>
+            <option value="floor">Paint floor (1)</option>
+          </select>
+        </label>
+        <label>Speed <span id="lab-speed-val">6</span>
+          <input type="range" id="lab-speed" min="1" max="60" value="6" />
+        </label>
+        <button class="btn btn-small btn-primary" id="lab-run">▶ Run All</button>
+        <button class="btn btn-small" id="lab-instant">⏭ Skip Animation</button>
+        <button class="btn btn-small" id="lab-clear">✕ Clear</button>
+        <button class="btn btn-small" id="lab-csv" disabled>⤓ Export CSV</button>
+      </div>
+
+      <div class="lab-panels" id="lab-panels"></div>
+
+      <div class="lab-results panel">
+        <h3>Comparison <span class="muted" id="lab-meta"></span></h3>
+        <div class="table-scroll">
+          <table class="results" id="lab-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Priority</th>
+                <th>Path found</th>
+                <th>Time / run (ms)</th>
+                <th>Timed runs</th>
+                <th>Nodes expanded</th>
+                <th>Path length</th>
+                <th>Total cost</th>
+                <th>Peak frontier</th>
+                <th>Cost-optimal?</th>
+              </tr>
+            </thead>
+            <tbody id="lab-tbody">
+              <tr><td colspan="10" class="muted">Press ▶ Run All to fill this table with measured results.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="insights" id="lab-insights"></ul>
+        <p class="note">Highlighted cells are the best value in each column. Time is the mean of several complete runs (after 2 untimed warm-up runs) because browsers limit timer precision; the number of runs is shown. Path length = moves; total cost = sum of terrain costs entered (floor 1, mud 3, water 5). Heuristic: Manhattan distance.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Core -->
+  <script src="js/core/constants.js"></script>
+  <script src="js/core/rng.js"></script>
+  <script src="js/core/priorityQueue.js"></script>
+  <script src="js/core/grid.js"></script>
+  <!-- Algorithms -->
+  <script src="js/algorithms/common.js"></script>
+  <script src="js/algorithms/bfs.js"></script>
+  <script src="js/algorithms/dfs.js"></script>
+  <script src="js/algorithms/ucs.js"></script>
+  <script src="js/algorithms/greedy.js"></script>
+  <script src="js/algorithms/astar.js"></script>
+  <script src="js/algorithms/registry.js"></script>
+  <!-- Maze -->
+  <script src="js/maze/mazeGenerator.js"></script>
+  <!-- Game logic -->
+  <script src="js/game/levels.js"></script>
+  <script src="js/game/entities.js"></script>
+  <script src="js/game/game.js"></script>
+  <!-- Rendering -->
+  <script src="js/render/sprites.js"></script>
+  <script src="js/render/tileArt.js"></script>
+  <script src="js/render/gameRenderer.js"></script>
+  <script src="js/render/labRenderer.js"></script>
+  <!-- Lab logic -->
+  <script src="js/lab/labRunner.js"></script>
+  <!-- Audio -->
+  <script src="js/audio/soundFx.js"></script>
+  <!-- UI -->
+  <script src="js/ui/input.js"></script>
+  <script src="js/ui/screens.js"></script>
+  <script src="js/ui/gameScreen.js"></script>
+  <script src="js/ui/labScreen.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
