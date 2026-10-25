@@ -10,6 +10,8 @@ Plain HTML, CSS, vanilla JavaScript and Canvas. No frameworks, no backend, no ex
 no paid dependencies. The two pixel fonts are bundled locally (SIL Open Font License), so it
 works fully offline.
 
+working demo : [dungeon-escapegame.netlify.app/](url)
+
 ---
 
 ## 1. How to run
